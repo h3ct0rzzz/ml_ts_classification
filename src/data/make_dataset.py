@@ -12,51 +12,58 @@ from src.constants import (
 )
 
 
-def replace_null_values(df: pd.DataFrame) -> pd.DataFrame:
-    def replace_nulls(x):
-        return [
-            np.mean([v for v in x if not pd.isnull(v)]) if pd.isnull(v) else v 
-            for v in x
-        ]
-    
-    df['values'] = df['values'].apply(replace_nulls)
+def fill_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+    for col_name in df.columns:
+        nan_mask = df[col_name].isna()
+        if nan_mask.any():
+            valid_values = df[~nan_mask][col_name].values
+            for idx in df[nan_mask].index:
+                df.at[idx, col_name] = np.random.choice(valid_values)
     return df
 
 
 def generate_features(df: pd.DataFrame) -> pd.DataFrame:
+    if df['values'].isna().any():
+        raise ValueError("NaN values detected in 'values' column.")
     feature_dict = {
         'id': df['id'],
         'start_date': df['dates'].apply(get_start_date),
         'end_date': df['dates'].apply(get_end_date),
         'duration': df['dates'].apply(calculate_duration)
     }
-    
+
     for name, func in globals().items():
         if hasattr(func, 'is_feature'):
-            if name == 'quantile':
-                feature_dict['quantile_25'] = df['values'].apply(
-                    lambda values: func(values, QUANTILE_25_VALUE)
-                )
-                feature_dict['quantile_75'] = df['values'].apply(
-                    lambda values: func(values, QUANTILE_75_VALUE)
-                )
-            elif name == 'autocorrelation':
-                feature_dict['autocorrelation_lag_1'] = df['values'].apply(
-                    lambda values: func(values, AUTOCORRELATION_LAG)
-                )
-            elif name == 'fft_coefficient':
-                feature_dict['fft_coefficient_0'] = df['values'].apply(
-                    lambda values: np.abs(func(values, FFT_COEFFICIENT_0))
-                )
-                feature_dict['fft_coefficient_1'] = df['values'].apply(
-                    lambda values: np.abs(func(values, FFT_COEFFICIENT_1))
-                )
-            elif name == 'number_crossing_m':
-                feature_dict['number_crossing_0'] = df['values'].apply(
-                    lambda values: func(values, NUMBER_CROSSING_VALUE)
-                )
-            else:
-                feature_dict[name] = df['values'].apply(func)
+            try:
+                if name == 'quantile':
+                    feature_dict['quantile_25'] = df['values'].apply(
+                        lambda values: func(values, QUANTILE_25_VALUE)
+                    )
+                    feature_dict['quantile_75'] = df['values'].apply(
+                        lambda values: func(values, QUANTILE_75_VALUE)
+                    )
+                elif name == 'autocorrelation':
+                    feature_dict['autocorrelation_lag_1'] = df['values'].apply(
+                        lambda values: func(values, AUTOCORRELATION_LAG)
+                    )
+                elif name == 'fft_coefficient':
+                    feature_dict['fft_coefficient_0'] = df['values'].apply(
+                        lambda values: np.abs(func(values, FFT_COEFFICIENT_0))
+                    )
+                    feature_dict['fft_coefficient_1'] = df['values'].apply(
+                        lambda values: np.abs(func(values, FFT_COEFFICIENT_1))
+                    )
+                elif name == 'number_crossing_m':
+                    feature_dict['number_crossing_0'] = df['values'].apply(
+                        lambda values: func(values, NUMBER_CROSSING_VALUE)
+                    )
+                else:
+                    feature_dict[name] = df['values'].apply(
+                        lambda values: func(values) if not np.isnan(values).any() else np.nan
+                    )
+            except Exception as e:
+                logging.warning(f"Error calculating feature {name}: {str(e)}")
+                continue
 
     processed_df = pd.DataFrame(feature_dict)
 
@@ -101,15 +108,8 @@ def reduce_mem_usage(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def make_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    if df is None or df.empty:
-        raise ValueError("Input DataFrame cannot be None or empty")
-        
-    try:
-        df = replace_null_values(df)
-        df = generate_features(df)
-        df = reduce_mem_usage(df)
-        return df
-        
-    except Exception as e:
-        logging.error(f"Error processing dataset: {str(e)}")
-        raise
+    df = fill_missing_values(df)
+    df = generate_features(df)
+    df = reduce_mem_usage(df)
+    df = df.fillna(df.mean())
+    return df

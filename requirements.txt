@@ -14,3 +14,6 @@ numpy
 matplotlib
 seaborn
 scipy
+shap
+sklearn
+optuna

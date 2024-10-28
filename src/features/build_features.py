@@ -5,7 +5,14 @@ from typing import Union, List
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress, entropy
-from src.constants import EPOCH_DATE, BENFORD_DIST
+from src.constants import (
+    EPOCH_DATE,
+    BENFORD_DIST,
+    PERMUTATION_ENTROPY_DEFAULT_ORDER,
+    PERMUTATION_ENTROPY_DEFAULT_DELAY,
+    ENERGY_RATIO_DEFAULT_NUM_SEGMENTS,
+    ENERGY_RATIO_DEFAULT_SEGMENT_FOCUS
+)
 
 
 def feature_function(func):
@@ -88,28 +95,28 @@ def calculate_duration(dates: List[datetime.date]) -> int:
 
 
 @feature_function
-def variance_larger_than_standard_deviation(data: Union[List[float], np.ndarray]) -> bool:
+def variance_larger_than_standard_deviation(data: Union[List[float], np.ndarray]) -> int:
     data = np.asarray(data)
     std = np.std(data)
-    return std * std > std
+    return int(std * std > std)
 
 
 @feature_function
-def has_duplicate_max(data: Union[List[float], np.ndarray]) -> bool:
+def has_duplicate_max(data: Union[List[float], np.ndarray]) -> int:
     data = np.asarray(data)
-    return np.sum(data == np.max(data)) >= 2
+    return int(np.sum(data == np.max(data)) >= 2)
 
 
 @feature_function
-def has_duplicate_min(data: Union[List[float], np.ndarray]) -> bool:
+def has_duplicate_min(data: Union[List[float], np.ndarray]) -> int:
     data = np.asarray(data)
-    return np.sum(data == np.min(data)) >= 2
+    return int(np.sum(data == np.min(data)) >= 2)
 
 
 @feature_function
-def has_duplicates(data: Union[List[float], np.ndarray]) -> bool:
+def has_duplicates(data: Union[List[float], np.ndarray]) -> int:
     data = np.asarray(data)
-    return data.size != np.unique(data).size
+    return int(data.size != np.unique(data).size)
 
 
 @feature_function
@@ -155,7 +162,9 @@ def mean_change(data: Union[List[float], np.ndarray]) -> float:
 @feature_function
 def mean_second_derivative_central(data: Union[List[float], np.ndarray]) -> float:
     data = np.asarray(data)
-    return (data[-1] - data[-2] - data[1] + data[0]) / (2 * (len(data) - 2)) if len(data) > 2 else np.nan
+    if len(data) <= 2:
+        return np.nan
+    return (data[-1] - data[-2] - data[1] + data[0]) / (2 * (len(data) - 2))
 
 
 @feature_function
@@ -316,7 +325,10 @@ def minimum(data: Union[List[float], np.ndarray]) -> float:
 @feature_function
 def benford_correlation(data: Union[List[float], np.ndarray]) -> float:
     data = np.asarray(data)
-    first_digits = np.array([int(str(np.format_float_scientific(i))[:1]) for i in np.abs(np.nan_to_num(data))])
+    first_digits = np.array([
+        int(str(np.format_float_scientific(i))[:1]) 
+        for i in np.abs(np.nan_to_num(data))
+    ])
     data_dist = np.array([(first_digits == n).mean() for n in range(1, 10)])
     return np.corrcoef(BENFORD_DIST, data_dist)[0, 1]
 
@@ -342,8 +354,9 @@ def number_crossing_m(data: Union[List[float], np.ndarray], threshold: float) ->
 
 
 @feature_function
-def energy_ratio_by_chunks(data: Union[List[float], np.ndarray], num_segments: int = 10,
-                           segment_focus: int = 0) -> float:
+def energy_ratio_by_chunks(data: Union[List[float], np.ndarray], 
+                           num_segments: int = ENERGY_RATIO_DEFAULT_NUM_SEGMENTS,
+                           segment_focus: int = ENERGY_RATIO_DEFAULT_SEGMENT_FOCUS) -> float:
     data = np.asarray(data)
     data_abs = np.abs(data)
     segments = np.array_split(data_abs, num_segments)
@@ -353,7 +366,9 @@ def energy_ratio_by_chunks(data: Union[List[float], np.ndarray], num_segments: i
 
 
 @feature_function
-def permutation_entropy(data: Union[List[float], np.ndarray], order: int = 3, delay: int = 1) -> float:
+def permutation_entropy(data: Union[List[float], np.ndarray],
+                        order: int = PERMUTATION_ENTROPY_DEFAULT_ORDER,
+                        delay: int = PERMUTATION_ENTROPY_DEFAULT_DELAY) -> float:
     data = np.asarray(data)
     permutations = np.array(list(itertools.permutations(range(order))))
     counts = [0] * len(permutations)
@@ -366,4 +381,5 @@ def permutation_entropy(data: Union[List[float], np.ndarray], order: int = 3, de
                 break
 
     counts = np.array(counts) / float(sum(counts))
-    return -np.sum(counts[counts > 0] * np.log(counts[counts > 0])) / np.log(float(len(permutations)))
+    entropy_sum = -np.sum(counts[counts > 0] * np.log(counts[counts > 0]))
+    return entropy_sum / np.log(float(len(permutations)))

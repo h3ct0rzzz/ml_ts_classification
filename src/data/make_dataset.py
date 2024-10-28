@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import logging
 from src.features.build_features import *
 from src.constants import (
     QUANTILE_25_VALUE,
@@ -11,8 +12,15 @@ from src.constants import (
 )
 
 
-def remove_rows_with_null_values(df: pd.DataFrame) -> pd.DataFrame:
-    return df[~df['values'].apply(lambda x: any(pd.isnull(v) for v in x))]
+def replace_null_values(df: pd.DataFrame) -> pd.DataFrame:
+    def replace_nulls(x):
+        return [
+            np.mean([v for v in x if not pd.isnull(v)]) if pd.isnull(v) else v 
+            for v in x
+        ]
+    
+    df['values'] = df['values'].apply(replace_nulls)
+    return df
 
 
 def generate_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -93,8 +101,15 @@ def reduce_mem_usage(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def make_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    return reduce_mem_usage(
-        generate_features(
-            remove_rows_with_null_values(df)
-        )
-    )
+    if df is None or df.empty:
+        raise ValueError("Input DataFrame cannot be None or empty")
+        
+    try:
+        df = replace_null_values(df)
+        df = generate_features(df)
+        df = reduce_mem_usage(df)
+        return df
+        
+    except Exception as e:
+        logging.error(f"Error processing dataset: {str(e)}")
+        raise

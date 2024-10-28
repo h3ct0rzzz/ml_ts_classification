@@ -28,3 +28,16 @@ PERMUTATION_ENTROPY_DEFAULT_DELAY = 1
 # Energy ratio by chunks constants
 ENERGY_RATIO_DEFAULT_NUM_SEGMENTS = 10
 ENERGY_RATIO_DEFAULT_SEGMENT_FOCUS = 0
+
+# CatBoost best hyperparameters
+BEST_PARAMS = {
+    'depth': None,
+    'learning_rate': None,
+    'l2_leaf_reg': None,
+    'random_strength': None,
+    'bagging_temperature': None,
+    'od_type': None,
+    'od_wait': None
+}
+
+MODEL_PATH = 'models/'

@@ -32,7 +32,7 @@ def load_data() -> pd.DataFrame:
         return df
     except Exception as e:
         logger.error(f"Error loading data: {str(e)}")
-        raise
+        raise e
 
 
 def split_data(df: pd.DataFrame) -> Tuple[Pool, Pool]:
@@ -52,7 +52,7 @@ def split_data(df: pd.DataFrame) -> Tuple[Pool, Pool]:
         return train_pool, val_pool
     except Exception as e:
         logger.error(f"Error splitting data: {str(e)}")
-        raise
+        raise e
 
 
 def train_model(train_pool: Pool, val_pool: Pool) -> CatBoostClassifier:
@@ -71,7 +71,7 @@ def train_model(train_pool: Pool, val_pool: Pool) -> CatBoostClassifier:
         return model
     except Exception as e:
         logger.error(f"Error training model: {str(e)}")
-        raise
+        raise e
 
 
 def evaluate_model(model: CatBoostClassifier, val_pool: Pool) -> float:
@@ -81,7 +81,7 @@ def evaluate_model(model: CatBoostClassifier, val_pool: Pool) -> float:
         return roc_auc
     except Exception as e:
         logger.error(f"Error evaluating model: {str(e)}")
-        raise
+        raise e
 
 
 def save_model(model: CatBoostClassifier, roc_auc: float) -> None:
@@ -97,7 +97,7 @@ def save_model(model: CatBoostClassifier, roc_auc: float) -> None:
         logger.info(f"Model saved to {model_path}")
     except Exception as e:
         logger.error(f"Error saving model: {str(e)}")
-        raise
+        raise e
 
 
 def main() -> None:
@@ -121,7 +121,7 @@ def main() -> None:
 
     except Exception as e:
         logger.error(f"Training pipeline failed: {str(e)}")
-        raise
+        raise e
 
 
 if __name__ == "__main__":

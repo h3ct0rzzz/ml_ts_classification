@@ -482,4 +482,5 @@ python src/models/predict_model.py
 ```
 
 После выполнения скрипта будет сформирован файл `data/predict/submission.csv`.
+
 ---
